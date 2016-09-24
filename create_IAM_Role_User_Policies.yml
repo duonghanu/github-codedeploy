@@ -1,0 +1,26 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Setup CodeDeploy Lab
+Parameters:
+  AccountId:
+    Type: Number
+    Default: 342206665730
+    Description: Your AWS account ID
+Resources:
+  # Create first role for AWS CodeDeploy
+  CodeDeployServiceRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - codedeploy.ap-southeast-1.amazonaws.com
+          Action:
+          - sts: AssumeRole
+      Path: "/"
+      #Policies:
+      #An AWS Managed Policies
+      #  - AWSCodeDeployRole
+      RoleName: CodeDeployServiceRole        

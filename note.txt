@@ -1,0 +1,12 @@
+- Create aws stack
+$aws cloudformation create-stack --stack-name test --template-body file::///create_IAM_Role_User_Policies.yml
+
+- List stack
+$aws cloudformation list-stacks
+
+- Delete stack
+$aws cloudformation delete-stack --stack-name test-role
+
+- Validate template
++ json format
+$aws cloudformation validate-template --template-body create_IAM_Role_User_Policies.template

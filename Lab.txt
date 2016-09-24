@@ -1,0 +1,109 @@
+1. Setup
+
+- Create S3 bucket and GitHub repo
+  + S3 bucket: dunguyenvan-codedeploy
+  + GitHub repo: https://github.com/duonghanu/github-codedeploy.git
+
+- Create IAM instance profile and service role
+ + Create first role
+ + Name: CodeDeployServiceRole
+  IAM->Role->New Role -> Amazon EC2 -> AWSCodeDeployRole
+  
+ + Edit trust relationship of this role
+ {
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "codedeploy.ap-southeast-1.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+
+  + Create simple Policy
+  Create Policy -> Create Your Own Policy
+  
+  Policy Name: SimpleCodeDeployInstanceProfilePolicy
+  Policy Document:
+  {
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": [
+                "s3:Get*",
+                "s3:List*"
+            ],
+            "Effect": "Allow",
+            "Resource": "*"
+        }
+    ]
+} 
+  
+
+  + Create second role and attach above policy to it
+  Name: SimpleCodeDeployInstanceProfile
+  Role Type: Amazon EC2
+  Attach Policy: SimpleCodeDeployInstanceProfilePolicy
+  
+  
+  + Create advanced Policy
+  Name: AdvancedCodeDeployInstanceProfilePolicy
+  Policy Document:
+
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:Get*",
+                "s3:List*"
+            ],
+            "Resource": [
+                "arn:aws:s3:::dunguyenvan-codedeploy",
+                "arn:aws:s3:::dunguyenvan-codedeploy/*",
+                "arn:aws:s3:::aws-codedeploy-us-east-1/*",
+                "arn:aws:s3:::aws-codedeploy-us-west-2/*",
+                "arn:aws:s3:::aws-codedeploy-eu-west-1/*",
+                "arn:aws:s3:::aws-codedeploy-ap-southeast-1/*",
+                "arn:aws:s3:::aws-codedeploy-ap-northeast-1/*"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "elasticloadbalancing:DeregisterInstancesFromLoadBalancer",
+                "elasticloadbalancing:DecribeInstanceHealth",
+                "elasticloadbalancing:DecribeLoadBalancerAttributes",
+                "elasticloadbalancing:DecribeLoadBalancers",
+                "elasticloadbalancing:RegisterInstanceWithLoadBalancer",
+                "autoscaling:Describe",
+                "autoscaling:UpdateAutoScalingGroup",
+                "autoscaling:EnterStandby",
+                "autoscaling:ExitStandby"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+
+
+  + Create third role and attach above policy to it
+  Name: AdvancedCodeDeployInstanceProfile
+  Role Type: Amazon EC2
+  Attach Policy: AdvancedCodeDeployInstanceProfilePolicy 
+  
+  
+  + Create new user for github
+Access Key ID:AKIAI7EYBLKJOY7ASDZQ
+Secret Access Key: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
+  
+  Name: GitHub
+  Attach Policy -> Amazon EC2 -> AWSCodeDeployDeployerAccess
+  
+- Create a web server tier (Windows + IIS)
+- Create a web server tier (Linux + Apache)
+
