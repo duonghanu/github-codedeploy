@@ -1,5 +1,5 @@
 - Create aws stack
-$ aws cloudformation create-stack --stack-name test --template-body file://create_IAM_Role_User_Policies.yml --capabilities CAPABILITY_NAMED_IAM
+$ aws cloudformation create-stack --stack-name IAM-Role-For-CodeDeploy --template-body file://create_IAM_Role_User_Policies.yml --capabilities CAPABILITY_NAMED_IAM
 {
     "StackId": "arn:aws:cloudformation:ap-southeast-1:342206665730:stack/test/fb2170c0-83b9-11e6-85f7-500caff244f2"
 }
