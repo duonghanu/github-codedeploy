@@ -1,5 +1,9 @@
 - Create aws stack
-$aws cloudformation create-stack --stack-name test --template-body file::///create_IAM_Role_User_Policies.yml
+$ aws cloudformation create-stack --stack-name test --template-body file://create_IAM_Role_User_Policies.yml --capabilities CAPABILITY_NAMED_IAM
+{
+    "StackId": "arn:aws:cloudformation:ap-southeast-1:342206665730:stack/test/fb2170c0-83b9-11e6-85f7-500caff244f2"
+}
+
 
 - List stack
 $aws cloudformation list-stacks
@@ -8,5 +12,7 @@ $aws cloudformation list-stacks
 $aws cloudformation delete-stack --stack-name test-role
 
 - Validate template
-+ json format
-$aws cloudformation validate-template --template-body create_IAM_Role_User_Policies.template
+$aws cloudformation validate-template --template-body file://create_IAM_Role_User_Policies.yml
+
+- Update template
+aws cloudformation update-stack --stack-name test --template-body file://create_IAM_Role_User_Policies.yml --capabilities CAPABILITY_NAMED_IAM
