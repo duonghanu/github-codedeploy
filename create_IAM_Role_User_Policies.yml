@@ -113,5 +113,26 @@ Resources:
       Roles:
         - 
           Ref: "AdvancedCodeDeployInstanceProfile"          
-          
+  # Create new user for github
+  githubUser:
+    Type: "AWS::IAM::User"
+    Properties:
+      UserName: "github"
+      ManagedPolicyArns: 
+        - "arn:aws:iam::aws:policy/AWSCodeDeployDeployerAccess" 
+  # Get Access and Secret key
+  githubAccessKey:
+    Type: "AWS::IAM::AccessKey"
+    Properties:
+      UserName:
+        Ref: githubUser
+
+# Get output
+Outputs:
+  AccessKeyForGitHub:
+    Value:
+      Ref: githubAccessKey
+  SecretKeyForGitHub:
+    Value: !GetAtt githubAccessKey.SecretAccessKey
+                                   
          

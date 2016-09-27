@@ -15,4 +15,4 @@ $aws cloudformation delete-stack --stack-name test-role
 $aws cloudformation validate-template --template-body file://create_IAM_Role_User_Policies.yml
 
 - Update template
-aws cloudformation update-stack --stack-name test --template-body file://create_IAM_Role_User_Policies.yml --capabilities CAPABILITY_NAMED_IAM
+aws cloudformation update-stack --stack-name 	IAM-Role-For-CodeDeploy --template-body file://create_IAM_Role_User_Policies.yml --capabilities CAPABILITY_NAMED_IAM
