@@ -16,3 +16,15 @@ $aws cloudformation validate-template --template-body file://create_IAM_Role_Use
 
 - Update template
 aws cloudformation update-stack --stack-name 	IAM-Role-For-CodeDeploy --template-body file://create_IAM_Role_User_Policies.yml --capabilities CAPABILITY_NAMED_IAM
+
+- Describe a stack events
+$aws cloudformation describe-stack-events --stack-name IAM-Role-For-CodeDeploy  
+
+- Get stack fail reason
+$ aws cloudformation describe-stack-events --stack-name IAM-Role-For-CodeDeploy | grep ResourceStatusReason
+
+- List all stack Resources
+$ aws cloudformation list-stack-resources --stack-name IAM-Role-For-CodeDeploy
+
+- Retrieve Template
+ $aws cloudformation get-template --stack-name IAM-Role-For-CodeDeploy --output text

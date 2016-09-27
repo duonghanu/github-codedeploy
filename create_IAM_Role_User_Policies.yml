@@ -1,10 +1,10 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "Setup CodeDeploy Lab"
 Parameters:
-  AccountId:
-    Type: Number
-    Default: 342206665730
-    Description: "Your AWS account ID"
+  S3BucketName:
+    Type: String
+    Default: "dunguyenvan-codedeploy"
+    Description: "S3 Bucket for CodeDeploy"
 Resources:
   # Create first role for AWS CodeDeploy
   CodeDeployServiceRole:
@@ -90,8 +90,8 @@ Resources:
               - "s3:Get*"
               - "s3:List*"
             Resource:
-              - "arn:aws:s3:::s3-bucket-codedeploy"
-              - "arn:aws:s3:::s3-bucket-codedeploy/*"
+              - !Sub "arn:aws:s3:::${S3BucketName}"
+              - !Sub "arn:aws:s3:::${S3BucketName}/*"
               - "arn:aws:s3:::aws-codedeploy-us-east-1/*"
               - "arn:aws:s3:::aws-codedeploy-us-west-2/*"
               - "arn:aws:s3:::aws-codedeploy-eu-west-1/*"
