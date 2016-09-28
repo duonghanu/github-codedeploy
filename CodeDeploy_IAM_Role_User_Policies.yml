@@ -1,0 +1,162 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Setup CodeDeploy Lab"
+Parameters:
+  S3BucketName:
+    Type: String
+    Default: "dunguyenvan-codedeploy"
+    Description: "S3 Bucket for CodeDeploy"
+Resources:
+  # Create first role for AWS CodeDeploy
+  CodeDeployServiceRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        -  
+          Effect: "Allow"
+          Principal:
+            # Trusted Entities
+            Service:
+              - "codedeploy.ap-southeast-1.amazonaws.com"
+          Action:
+            - "sts:AssumeRole"
+      ManagedPolicyArns: 
+        - "arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole"
+      Path: "/"    
+      RoleName: "CodeDeployServiceRole"
+  # Create Instance profile for CodeDeployServiceRole
+  CodeDeployServiceInstanceProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Path: "/"
+      Roles:
+        - 
+          Ref: "CodeDeployServiceRole"
+  # Create second Role for AWS CodeDeploy
+  SimpleCodeDeployInstanceProfile:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        -  
+          Effect: "Allow"
+          Principal:
+            # Trusted Entities
+            Service:
+              - "ec2.amazonaws.com"
+          Action:
+            - "sts:AssumeRole"
+      Path: "/"
+      RoleName: "SimpleCodeDeployInstanceProfile"  
+  # Create Instance profile for SimpleCodeDeployInstanceProfile Role
+  SimpleCodeDeployInstanceProfileRole:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Path: "/"
+      Roles:
+        - 
+          Ref: "SimpleCodeDeployInstanceProfile"      
+  # Create custom policy and attach to above role
+  SimpleCodeDeployInstanceProfilePolicy:
+    Type: "AWS::IAM::Policy"
+    Properties:
+      PolicyName: "SimpleCodeDeployInstanceProfilePolicy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - 
+            Effect: "Allow"
+            Action:
+              - "s3:Get*"
+              - "s3:List*"
+            Resource: "*"
+      Roles:
+        - 
+          Ref: "SimpleCodeDeployInstanceProfile"
+  # Create third Role for AWS CodeDeploy
+  AdvancedCodeDeployInstanceProfile:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        -  
+          Effect: "Allow"
+          Principal:
+            # Trusted Entities
+            Service:
+              - "ec2.amazonaws.com"
+          Action:
+            - "sts:AssumeRole"
+      Path: "/"
+      RoleName: "AdvancedCodeDeployInstanceProfile"  
+  # Create Instance profile for AdvancedCodeDeployInstanceProfile Role
+  AdvancedCodeDeployInstanceProfileRole:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Path: "/"
+      Roles:
+        - 
+          Ref: "AdvancedCodeDeployInstanceProfile"           
+  # Create custom policy and attach to above role
+  AdvancedCodeDeployInstanceProfilePolicy:
+    Type: "AWS::IAM::Policy"
+    Properties:
+      PolicyName: "AdvancedCodeDeployInstanceProfilePolicy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - 
+            Effect: "Allow"
+            Action:
+              - "s3:Get*"
+              - "s3:List*"
+            Resource:
+              - !Sub "arn:aws:s3:::${S3BucketName}"
+              - !Sub "arn:aws:s3:::${S3BucketName}/*"
+              - "arn:aws:s3:::aws-codedeploy-us-east-1/*"
+              - "arn:aws:s3:::aws-codedeploy-us-west-2/*"
+              - "arn:aws:s3:::aws-codedeploy-eu-west-1/*"
+              - "arn:aws:s3:::aws-codedeploy-ap-southeast-1/*"
+              - "arn:aws:s3:::aws-codedeploy-ap-northeast-1/*" 
+          -
+            Effect: "Allow"
+            Action:
+              - "elasticloadbalancing:DeregisterInstancesFromLoadBalancer"
+              - "elasticloadbalancing:DecribeInstanceHealth"
+              - "elasticloadbalancing:DecribeLoadBalancerAttributes"
+              - "elasticloadbalancing:DecribeLoadBalancers"
+              - "elasticloadbalancing:RegisterInstanceWithLoadBalancer"
+              - "autoscaling:Describe"
+              - "autoscaling:UpdateAutoScalingGroup"
+              - "autoscaling:EnterStandby"
+              - "autoscaling:ExitStandby" 
+            Resource: "*"                       
+      Roles:
+        - 
+          Ref: "AdvancedCodeDeployInstanceProfile"          
+  # Create new user for github
+  githubUser:
+    Type: "AWS::IAM::User"
+    Properties:
+      UserName: "github"
+      ManagedPolicyArns: 
+        - "arn:aws:iam::aws:policy/AWSCodeDeployDeployerAccess" 
+  # Get Access and Secret key
+  githubAccessKey:
+    Type: "AWS::IAM::AccessKey"
+    Properties:
+      UserName:
+        Ref: githubUser
+
+# Get output
+Outputs:
+  AccessKeyForGitHub:
+    Value:
+      Ref: githubAccessKey
+  SecretKeyForGitHub:
+    Value: !GetAtt githubAccessKey.SecretAccessKey
+                                   
+         

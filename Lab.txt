@@ -1,4 +1,4 @@
-1. Setup
+1. Setup User and Role
 
 - Create S3 bucket and GitHub repo
   + S3 bucket: dunguyenvan-codedeploy
@@ -103,7 +103,9 @@ Secret Access Key:roUwLcHo5A6LDSDRFsBzjfUgugjlFhddsZ70bSVp
   
   Name: GitHub
   Attach Policy -> Amazon EC2 -> AWSCodeDeployDeployerAccess
-  
+ 
+2. Create Infrastructure
 - Create a web server tier (Windows + IIS)
+
 - Create a web server tier (Linux + Apache)
 

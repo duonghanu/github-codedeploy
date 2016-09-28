@@ -1,0 +1,54 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "AWS CodeDeploy Infrastructure"
+Parameters:
+  VPCID:
+    Description: "VPC ID"
+    Type: "AWS::EC2::VPC::Id"
+    Default: "vpc-f05c5e95"
+    
+  MyIp:
+    Description: "Enter your IP address in CIDR notation, e.g 100.150.200.225/32"
+    Type: String
+    Default: "14.160.65.22/32"
+    
+  InstanceProfile:
+    Description: Use the full ARN for SimpleCodeDeployInstanceProfile or AdvancedCodeDeployInstanceProfile
+    Type: String
+    Default: "arn:aws:iam::342206665730:instance-profile/IAM-Role-For-CodeDeploy-SimpleCodeDeployInstanceProfileRole-167OXK5EP2AOU"
+    
+  KeyName:
+    Description: "Name of an existing EC2 KeyPair to enable SSH access to the instance"
+    Type: "AWS::EC2::KeyPair::KeyName"
+    ConstraintDescription: "The name of an existing EC2 KeyPair"
+    Default: "dunguyevan"
+  
+  AZ:
+    Description: "Comma delimited list of AvailabilityZones where the instances will be created"
+    Type: List<AWS::EC2::AvailabilityZone::Name>
+    Default: "us-east-1a,us-east-1b,us-east-1d"
+  
+  PublicSubnets:
+    Description: "Comman delimited list of public subnets"
+    Type: List<AWS::EC2::Subnet::Id>
+    Default: "subnet-5ca7ee04,subnet-2e226e04,subnet-9a3a10a7"
+  
+  InstanceType:
+    Description: "Enter t1.micro or m1.small. Default is t1.micro"
+    Type: String
+    Default: t1.micro
+    AllowedValues:
+      - t1.micro
+      - m1.small
+      
+  LinuxAmiId:
+    Description: "Linux AMI ID, Default is Amazon Linux AMI"
+    Type: AWS::EC2::Image::Id
+    Default: "ami-c481fad3"
+    
+  WindowAmiId:
+    Description: "Window AMI ID, Default is Microsoft Windows Server 2008 R2 SP1 Datacenter 64-bit Locale English with SQL Express 2008 R2 and IIS"
+    Type: AWS::EC2::Image::Id
+    Default: "ami-d87e03cf"    
+  
+
+
