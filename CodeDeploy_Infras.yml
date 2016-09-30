@@ -1,10 +1,10 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "AWS CodeDeploy Infrastructure"
 Parameters:
-  VPCID:
+  VpcId:
     Description: "VPC ID"
     Type: "AWS::EC2::VPC::Id"
-    Default: "vpc-f05c5e95"
+    Default: "vpc-229a3d45"
     
   MyIp:
     Description: "Enter your IP address in CIDR notation, e.g 100.150.200.225/32"
@@ -14,13 +14,13 @@ Parameters:
   InstanceProfile:
     Description: Use the full ARN for SimpleCodeDeployInstanceProfile or AdvancedCodeDeployInstanceProfile
     Type: String
-    Default: "arn:aws:iam::342206665730:instance-profile/IAM-Role-For-CodeDeploy-SimpleCodeDeployInstanceProfileRole-167OXK5EP2AOU"
+    Default: "arn:aws:iam::342206665730:instance-profile/IAM-Role-For-CodeDeploy-SimpleCodeDeployInstanceProfileRole-1VLUANI1JJ36J"
     
   KeyName:
     Description: "Name of an existing EC2 KeyPair to enable SSH access to the instance"
     Type: "AWS::EC2::KeyPair::KeyName"
     ConstraintDescription: "The name of an existing EC2 KeyPair"
-    Default: "dunguyevan"
+    Default: "dunguyenvan-aws-east-1"
   
   AZ:
     Description: "Comma delimited list of AvailabilityZones where the instances will be created"
@@ -30,7 +30,7 @@ Parameters:
   PublicSubnets:
     Description: "Comman delimited list of public subnets"
     Type: List<AWS::EC2::Subnet::Id>
-    Default: "subnet-5ca7ee04,subnet-2e226e04,subnet-9a3a10a7"
+    Default: "subnet-65fdc113,subnet-5ca7ee04,subnet-2e226e04"
   
   InstanceType:
     Description: "Enter t1.micro or m1.small. Default is t1.micro"
@@ -43,12 +43,312 @@ Parameters:
   LinuxAmiId:
     Description: "Linux AMI ID, Default is Amazon Linux AMI"
     Type: AWS::EC2::Image::Id
-    Default: "ami-c481fad3"
+    Default: "ami-4d87fc5a"
     
   WindowAmiId:
-    Description: "Window AMI ID, Default is Microsoft Windows Server 2008 R2 SP1 Datacenter 64-bit Locale English with SQL Express 2008 R2 and IIS"
+    Description: "Window AMI ID, Default is Microsoft Window Server 2008 R2 SP1 Datacenter 64-bit Locale English with SQL Express 2008 R2 and IIS"
     Type: AWS::EC2::Image::Id
-    Default: "ami-d87e03cf"    
+    Default: "ami-d87e03cf"
+
+Resources:
+  # Security Group for Web
+  WebSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "Web Security Group"
+      SecurityGroupEgress:
+        - CidrIp: "0.0.0.0/0"
+          FromPort: -1
+          IpProtocol: -1
+          ToPort: -1
+      SecurityGroupIngress:
+        - CidrIp: "0.0.0.0/0"
+          FromPort: 80
+          IpProtocol: 6
+          ToPort: 80
+        - CidrIp: !Ref MyIp
+          IpProtocol: -1
+      VpcId: !Ref VpcId
   
+  #SNS Topic for Linux Web
+  LinuxWebSNSTopic:
+    Type: "AWS::SNS::Topic"
+  
+  # Auto Scaling Group for Linux
+  LinuxWebASG:
+    Type: "AWS::AutoScaling::AutoScalingGroup"
+    Properties:
+      AvailabilityZones: !Ref AZ
+      VPCZoneIdentifier: !Ref PublicSubnets
+      MinSize: 3
+      MaxSize: 3
+      HealthCheckType: EC2
+      HealthCheckGracePeriod: 600
+      NotificationConfiguration:
+        TopicARN: !Ref LinuxWebSNSTopic
+        NotificationTypes:
+          - "autoscaling:EC2_INSTANCE_LAUNCH"
+          - "autoscaling:EC2_INSTANCE_LAUNCH_ERROR"
+          - "autoscaling:EC2_INSTANCE_TERMINATE"
+          - "autoscaling:EC2_INSTANCE_TERMINATE_ERROR"
+      LoadBalancerNames: 
+        - !Ref LinuxWebELB
+      DesiredCapacity: 3
+      LaunchConfigurationName: !Ref LinuxWebLaunchConfig
+      Tags:        
+        - Key: "Name"
+          Value: "LinuxWebServer"
+          PropagateAtLaunch: "true" 
+          
+  # Auto Scaling Launch Config for Linux
+  LinuxWebLaunchConfig:
+    Type: "AWS::AutoScaling::LaunchConfiguration"
+    Properties:
+      AssociatePublicIpAddress: "true"
+      ImageId: !Ref LinuxAmiId
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      SecurityGroups:
+        - !Ref WebSecurityGroup
+      IamInstanceProfile: !Ref InstanceProfile
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+          yum update -y
+          yum install httpd ruby aws-cli -y
+          cd ~
+          aws s3 cp s3://aws-codedeploy-us-east-1/latest/install . --region us-east-1
+          chmod +x ./install
+          ./install auto
+          echo 'hello world' > /var/www/html/index.html
+          hostname >> /var/www/html/index.html
+          chkconfig httpd on
+          service httpd start 
+  
+  # Auto Scale Up Policy for Linux Web
+  LinuxWebAutoScaleUpPolicy:
+    Type: "AWS::AutoScaling::ScalingPolicy"
+    Properties:
+      AdjustmentType: "ChangeInCapacity"
+      AutoScalingGroupName: !Ref LinuxWebASG
+      Cooldown: 300
+      ScalingAdjustment: 1
+  
+  # Auto Scale Down Policy for Linux Web    
+  LinuxWebAutoScaleDownPolicy:
+    Type: "AWS::AutoScaling::ScalingPolicy"
+    Properties:
+      AdjustmentType: "ChangeInCapacity"
+      AutoScalingGroupName: !Ref LinuxWebASG
+      Cooldown: 300
+      ScalingAdjustment: -1 
+      
+  # CloudWatch CPU Alarm High for Linux Web
+  LinuxWebCloudWatchCPUAlarmHigh:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmDescription: "SNS Notification and scale up if CPU Util is Higher than 90% for 10 mins"
+      MetricName: "CPUUtilization"
+      Namespace: "AWS/EC2"   
+      Statistic: "Average"
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 90
+      AlarmActions:
+        - !Ref LinuxWebAutoScaleUpPolicy
+        - !Ref LinuxWebSNSTopic
+      Dimensions:
+        - Name: "AutoScalingGroupName"
+          Value: !Ref LinuxWebASG
+      ComparisonOperator: "GreaterThanThreshold"
 
+  # CloudWatch CPU Alarm Low for Linux Web
+  LinuxWebCloudWatchCPUAlarmLow:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmDescription: "SNS Notification and scale down if CPU Util is Higher than 70% for 10 mins"
+      MetricName: "CPUUtilization"
+      Namespace: "AWS/EC2"   
+      Statistic: "Average"
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 70
+      AlarmActions:
+        - !Ref LinuxWebAutoScaleDownPolicy
+        - !Ref LinuxWebSNSTopic
+      Dimensions:
+        - Name: "AutoScalingGroupName"
+          Value: !Ref LinuxWebASG          
+      ComparisonOperator: "LessThanThreshold"     
+      
+  # Elastic LoadBalancing for Linux Web
+  LinuxWebELB:
+    Type: "AWS::ElasticLoadBalancing::LoadBalancer"
+    Properties:
+      CrossZone: true    
+      ConnectionDrainingPolicy: 
+        Enabled: "true"
+        Timeout: 60
+      HealthCheck:
+        Target: "HTTP:80/index.html"
+        HealthyThreshold: 3
+        UnhealthyThreshold: 3
+        Interval: 15
+        Timeout: 5
+      LoadBalancerName: "LinuxWebELB"
+      Scheme: "internet-facing"
+      Listeners:
+        - LoadBalancerPort: 80
+          InstancePort: 80
+          InstanceProtocol: "HTTP"
+          Protocol: "HTTP"
+      SecurityGroups:
+        - !Ref WebSecurityGroup
+      Subnets: !Ref PublicSubnets
+      Tags:
+        - Key: "Network"
+          Value: "public"
 
+  # SNS Topic for Window
+  WindowWebSNSTopic:
+    Type: "AWS::SNS::Topic"
+    
+  # Auto Scaling Group for Window Web
+  WindowWebASG:
+    Type: "AWS::AutoScaling::AutoScalingGroup"
+    Properties:
+      AvailabilityZones: !Ref AZ
+      VPCZoneIdentifier: !Ref PublicSubnets
+      MinSize: 3
+      MaxSize: 3
+      HealthCheckType: "EC2"
+      HealthCheckGracePeriod: 600
+      NotificationConfiguration:
+        TopicARN: !Ref WindowWebSNSTopic
+        NotificationTypes:
+          - "autoscaling:EC2_INSTANCE_LAUNCH"
+          - "autoscaling:EC2_INSTANCE_LAUNCH_ERROR"
+          - "autoscaling:EC2_INSTANCE_TERMINATE"
+          - "autoscaling:EC2_INSTANCE_TERMINATE_ERROR"                        
+      LoadBalancerNames:
+        - !Ref WindowWebELB
+      DesiredCapacity: 3
+      LaunchConfigurationName: !Ref WindowWebLaunchConfig
+      Tags:
+        - Key: "Name"
+          Value: "WindowWebServer"
+          PropagateAtLaunch: "true"
+          
+  # Auto Scaling Launch Configuration for Window Web
+  WindowWebLaunchConfig:
+    Type: "AWS::AutoScaling::LaunchConfiguration"  
+    Properties:
+      AssociatePublicIpAddress: "true"
+      ImageId: !Ref WindowAmiId
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      SecurityGroups:
+        - !Ref WebSecurityGroup
+      IamInstanceProfile: !Ref InstanceProfile
+      UserData:
+        Fn::Base64: !Sub |
+          <script>
+            echo hello world > c:\inetpub\wwwroot\index.html
+            hostname >> c:\inetpub\wwwroot\index.html
+            if not exist "c:\temp mkdir c:\temp
+            powershell.exe -Command Read-S3Object -BucketName aws-codedeploy-us-east-1/latest -Key codedeploy-agent.msi -File c:\temp\codedeploy-agent.msi
+            c:\temp\codedeploy-agent.msi /quiet /1 c:\temp\host-agent-install-log.txt
+            powershell.exe -Command Get-service -Name codedeployagent
+          </script>
+  
+  # Auto Scaling Up Policy for Window Web    
+  WindowWebAutoScaleUpPolicy:
+    Type: "AWS::AutoScaling::ScalingPolicy"
+    Properties:
+      AdjustmentType: "ChangeInCapacity"
+      AutoScalingGroupName: !Ref WindowWebASG
+      Cooldown: 300
+      ScalingAdjustment: 1
+
+  # Auto Scaling Down Policy for Window Web    
+  WindowWebAutoScaleUpPolicy:
+    Type: "AWS::AutoScaling::ScalingPolicy"
+    Properties:
+      AdjustmentType: "ChangeInCapacity"
+      AutoScalingGroupName: !Ref WindowWebASG
+      Cooldown: 300
+      ScalingAdjustment: -1  
+
+  # CloudWatch CPU Alarm High for Window
+  WindowWebCloudWatchCPUAlarmHigh:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmDescription: "SNS Notification and scale up if CPU Util is Higher than 90% for 10 mins"
+      MetricName: "CPUUtilization"
+      Namespace: "AWS/EC2"
+      Statistic: "Average"
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 90
+      AlarmActions:
+        - !Ref WindowWebAutoScaleUpPolicy
+        - !Ref WindowWebSNSTopic
+      Dimensions:
+        - Name: "AutoScalingGroupName"
+          Value: !Ref WindowWebASG
+      ComparisonOperator: "GreaterThanThreshold"    
+      
+  # CloudWatch CPU Alarm Low for Window
+  WindowWebCloudWatchCPUAlarmLow:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmDescription: "SNS Notification and scale up if CPU Util is Lower than 70% for 10 mins"
+      MetricName: "CPUUtilization"
+      Namespace: "AWS/EC2"
+      Statistic: "Average"
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 70
+      AlarmActions:
+        - !Ref WindowWebAutoScaleUpPolicy
+        - !Ref WindowWebSNSTopic
+      Dimensions:
+        - Name: "AutoScalingGroupName"
+          Value: !Ref WindowWebASG
+      ComparisonOperator: "GreaterThanThreshold"         
+
+  # Elastic Load Balancer for Window Web
+  WindowWebELB:
+    Type: "AWS::ElasticLoadBalancing::LoadBalancer"
+    Properties:
+      CrossZone: "true"
+      ConnectionDrainingPolicy:
+        Enabled: "true"
+        Timeout: 60
+      HealthCheck:
+        Target: "HTTP:80/index.html"
+        HealthyThreshold: 3
+        UnhealthyThreshold: 3
+        Interval: 15
+        Timeout: 5
+      LoadBalancerName: "WindowWebELB"
+      Scheme: "internet-facing"
+      Listeners:
+        - LoadBalancerPort: 80
+          InstancePort: 80
+          InstanceProtocol: "HTTP"
+          Protocol: "HTTP"
+      SecurityGroups:
+        - !Ref WebSecurityGroup
+      Subnets: !Ref PublicSubnets
+      Tags:
+        - Key: "Network"
+          Value: "public"
+          
+Outputs:
+  LinuxWebFQDN:
+    Value: 
+      Fn::GetAtt: ["LinuxWebELB", "DNSName"]
+  WindowWebFQDN:
+    Value:
+      Fn::GetAtt: ["WindowWebELB", "DNSName"]

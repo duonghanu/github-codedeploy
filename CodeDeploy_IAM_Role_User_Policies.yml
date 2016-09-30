@@ -98,8 +98,7 @@ Resources:
     Properties:
       Path: "/"
       Roles:
-        - 
-          Ref: "AdvancedCodeDeployInstanceProfile"           
+        - Ref: "AdvancedCodeDeployInstanceProfile"           
   # Create custom policy and attach to above role
   AdvancedCodeDeployInstanceProfilePolicy:
     Type: "AWS::IAM::Policy"
